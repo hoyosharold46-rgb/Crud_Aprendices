@@ -1,0 +1,16 @@
+[
+  {
+    "nombre": "juanes",
+    "apellido": "pedroza",
+    "edad": 39,
+    "correo": "juanes@example.com",
+    "dni": 2
+  },
+  {
+    "nombre": "fere",
+    "apellido": "arizona",
+    "edad": 20,
+    "correo": "fer@example.com",
+    "dni": 3
+  }
+]
