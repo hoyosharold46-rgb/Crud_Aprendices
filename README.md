@@ -532,9 +532,10 @@ En este caso fuimos resolviendo el problema paso a paso:
 8. Descubrimos que `app.js` estaba vacío.
 9. El siguiente paso es colocar el código del servidor Express en `app.js`.
 
-Claro. Este comando:
 
-New-Item .gitignore -ItemType File
+# nuevo tema, significado de: New-Item .gitignore -ItemType File
+
+## New-Item .gitignore -ItemType File
 
 se puede entender como una orden de PowerShell para crear un archivo.
 
@@ -547,11 +548,11 @@ New significa crear/nuevo y Item significa elemento.
 
 Por eso:
 
-New-Item
+## New-Item
 
 significa aproximadamente:
 
-"Crea un elemento nuevo."
+## "Crea un elemento nuevo."
 
 PowerShell puede crear diferentes tipos de elementos: archivos, carpetas, etc.
 
@@ -559,7 +560,7 @@ PowerShell puede crear diferentes tipos de elementos: archivos, carpetas, etc.
 
 Es el nombre del elemento que queremos crear.
 
-New-Item .gitignore
+## New-Item .gitignore
 
 Le estamos diciendo:
 
@@ -596,7 +597,7 @@ significa:
 
 Por eso:
 
-New-Item .gitignore -ItemType File
+## New-Item .gitignore -ItemType File
 
 se puede traducir literalmente como:
 
@@ -607,12 +608,14 @@ Crea un elemento llamado .gitignore y haz que sea un archivo.
 Porque PowerShell utiliza una estructura basada en comandos + parámetros + valores.
 
 La estructura general sería:
+---
 
 COMANDO       NOMBRE       PARÁMETRO       VALOR
    ↓             ↓              ↓             ↓
 New-Item    .gitignore    -ItemType       File
+---
 
-Es parecido a decir:
+## Es parecido a decir:
 
 Crear
  ↓
@@ -627,7 +630,7 @@ Aquí está una diferencia importante.
 
 Para crear una carpeta podríamos usar:
 
-New-Item MiCarpeta -ItemType Directory
+## New-Item MiCarpeta -ItemType Directory
 
 La diferencia es:
 
