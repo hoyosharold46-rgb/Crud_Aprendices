@@ -1,29 +1,19 @@
 const express = require('express');
 const app = express();
-require('dotenv/config');
-const port = process.env.PUERTO || 3111;
+require('dotenv').config({ quiet: true });
+const port = process.env.PORT || 3000;
 //body-parser
 app.use(express.json())
-
-// endpoint json
-app.post("/datosaJson", (req, res) =>{
-    const datosRecibidos = req.body
-    //validamos si loos datos son recibidos
-    if (datosRecibidos){
-        res.json({mensaje: "datos recibidos correctamente"})
-    }
-    res.status(500).json({Mensaje:"No se recibieron datos"});
-})
-
-
 
 //libreria para leer archivo
 const sistemaArchivo = require('fs');
 const ruta = require('path');
-//funciones de validación
-const { validarAprendiz } = require('./validaciones');
-//generar una ruta para el archivo aprendices.json
-const rutaArchivoJson = ruta.join(__dirname, 'listaDatos.json');
+//generar una ruta para el archivo ListaDatos.json
+const rutaArchivoJson = ruta.join(__dirname, 'ListaDatos.json');
+
+//importar validaciones
+const { validarNombre, validarCorreo } = require('./validaciones/validar');
+
 //ruta raiz
 app.get('/', (req, res) => {
     res.send('API RESTFUL - CRUD Aprendices');
@@ -33,29 +23,25 @@ app.get('/', (req, res) => {
 app.get('/api/aprendices', (req, res) => {
     sistemaArchivo.readFile(rutaArchivoJson, "utf-8", (error, datos) => {
         if (error) {
-            return res.status(500).json({ Error: "Error al leer el archivo, conxion bd" })
+            return res.status(500).json({ Error: "Error al leer el archivo, conexión bd" })
         }
         const listaAprendices = JSON.parse(datos);
         res.json(listaAprendices);
     });
 });
 
-
-
-//endpoint para obtener un solo aprendiz por dni
+//endpoint para listar todos los datos de un aprendiz por su dni
 app.get('/api/aprendices/:dni', (req, res) => {
-    const dni = parseInt(req.params.dni)
+    const dni = parseInt(req.params.dni);
     sistemaArchivo.readFile(rutaArchivoJson, "utf-8", (error, datos) => {
         if (error) {
-            return res.status(500).json({ Error: "Error al leer el archivo, conxion bd" })
+            return res.status(500).json({ Error: "Error al leer el archivo, conexión bd" })
         }
         const listaAprendices = JSON.parse(datos);
-        const aprendiz = listaAprendices.find(aprendiz => aprendiz.dni === dni)
-
+        const aprendiz = listaAprendices.find(a => a.dni === dni);
         if (!aprendiz) {
-            return res.status(404).json({ Error: "Aprendiz no encontrado." })
+            return res.status(404).json({ Error: "No se encontró un aprendiz con ese dni" });
         }
-
         res.json(aprendiz);
     });
 });
@@ -64,23 +50,25 @@ app.get('/api/aprendices/:dni', (req, res) => {
 app.post("/api/aprendices", (req, res) => {
     const datoAprendiz = req.body
 
-    //validar nombre y correo antes de continuar
-    const { esValido, errores } = validarAprendiz(datoAprendiz);
-    if (!esValido) {
-        return res.status(400).json({ Error: "Datos inválidos", detalles: errores });
+    //VALIDACIONES
+    const nombreValido = validarNombre(datoAprendiz.nombre);
+    if (!nombreValido.valido) {
+        return res.status(400).json({ Error: nombreValido.mensaje });
+    }
+
+    const correoValido = validarCorreo(datoAprendiz.correo);
+    if (!correoValido.valido) {
+        return res.status(400).json({ Error: correoValido.mensaje });
     }
 
     sistemaArchivo.readFile(rutaArchivoJson, "utf-8", (error, datos) => {
         if (error) {
-            return res.status(500).json({ Error: "Error al leer el archivo, conxion bd" })
+            return res.status(500).json({ Error: "Error al leer el archivo, conexión bd" })
         }
         const listaAprendices = JSON.parse(datos);
-
-        //generar dni automático: el mayor dni existente + 1 (si no hay registros, inicia en 1)
-        const dniAutomatico = listaAprendices.length > 0
-            ? Math.max(...listaAprendices.map(aprendiz => aprendiz.dni)) + 1
-            : 1;
-        datoAprendiz.dni = dniAutomatico;
+        //dni AUTOMÁTICO: se genera a partir del último dni registrado
+        const ultimoDni = listaAprendices.length > 0 ? listaAprendices[listaAprendices.length - 1].dni : 0;
+        datoAprendiz.dni = ultimoDni + 1;
 
         //adicionar a la lista el nuevo aprendiz
         listaAprendices.push(datoAprendiz)
@@ -89,9 +77,8 @@ app.post("/api/aprendices", (req, res) => {
             if (error) {
                 return res.status(500).json({ Error: "No se puede registrar el aprendiz." })
             }
-            res.json(datoAprendiz)
+            res.status(201).json(datoAprendiz)
         })
-
     })
 })
 
@@ -101,53 +88,59 @@ app.put("/api/aprendices/:dni", (req, res) => {
     const datosAprendiz = req.body
     sistemaArchivo.readFile(rutaArchivoJson, "utf-8", (error, datos) => {
         if (error) {
-            return res.status(500).json({ Error: "Error al leer el archivo, conxion bd" })
+            return res.status(500).json({ Error: "Error al leer el archivo, conexión bd" })
         }
         let listaAprendices = JSON.parse(datos);
-        //modificar datos de un aprendiz
 
+        //verificar que el aprendiz exista
+        const existe = listaAprendices.some(a => a.dni === dni);
+        if (!existe) {
+            return res.status(404).json({ Error: "No se encontró un aprendiz con ese dni" });
+        }
+
+        //modificar datos de un aprendiz
         listaAprendices = listaAprendices.map(aprendiz => {
             return aprendiz.dni === dni ? { ...aprendiz, ...datosAprendiz } : aprendiz
         })
-        //adicionar al archivo el nuevo aprendiz
+        //adicionar al archivo el aprendiz modificado
         sistemaArchivo.writeFile(rutaArchivoJson, JSON.stringify(listaAprendices, null, 2), (error) => {
             if (error) {
                 return res.status(500).json({ Error: "No se puede registrar el aprendiz." })
             }
             res.json(datosAprendiz)
         })
-
     })
 })
 
 //Endpoint para eliminar un aprendiz
 app.delete("/api/aprendices/:dni", (req, res) => {
-    const dni = parseInt(req.params.dni)
+    const dni = parseInt(req.params.dni);
     sistemaArchivo.readFile(rutaArchivoJson, "utf-8", (error, datos) => {
         if (error) {
-            return res.status(500).json({ Error: "Error al leer el archivo, conxion bd" })
+            return res.status(500).json({ Error: "Error al leer el archivo, conexión bd" })
         }
         let listaAprendices = JSON.parse(datos);
 
-        const existeAprendiz = listaAprendices.some(aprendiz => aprendiz.dni === dni)
-        if (!existeAprendiz) {
-            return res.status(404).json({ Error: "Aprendiz no encontrado." })
+        //verificar que el aprendiz exista
+        const aprendizExiste = listaAprendices.some(a => a.dni === dni);
+        if (!aprendizExiste) {
+            return res.status(404).json({ Error: "No se encontró un aprendiz con ese dni" });
         }
 
-        //filtrar la lista excluyendo el aprendiz con el dni indicado
-        listaAprendices = listaAprendices.filter(aprendiz => aprendiz.dni !== dni)
+        //eliminar al aprendiz de la lista
+        listaAprendices = listaAprendices.filter(a => a.dni !== dni);
 
+        //guardar los cambios en el archivo
         sistemaArchivo.writeFile(rutaArchivoJson, JSON.stringify(listaAprendices, null, 2), (error) => {
             if (error) {
                 return res.status(500).json({ Error: "No se puede eliminar el aprendiz." })
             }
-            res.json({ mensaje: "Aprendiz eliminado correctamente." })
+            res.json({ Mensaje: "Aprendiz eliminado correctamente" })
         })
     })
 })
 
-
 // Modo de escucha del servidor
 app.listen(port, () => {
-    console.log(`SERVER: http://localhost:${port}`)
-})
+    console.log(`SERVER: http://localhost:${port}`);
+});
