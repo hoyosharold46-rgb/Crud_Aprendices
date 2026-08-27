@@ -4,6 +4,20 @@ require('dotenv/config');
 const port = process.env.PUERTO || 3111;
 //body-parser
 app.use(express.json())
+//utilizacion de libreia multer
+const multer = require('multer');
+//configuracion almacenamiento
+const almacenamiento = multer.diskStorage8({
+    destination: (req, file, cb) => {
+        cb(null, "misimagenes/")
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}`)
+    }
+})
+
+const cargar = multer({ storage: almacenamiento })
+
 
 //libreria para leer archivo
 const sistemaArchivo = require('fs');
@@ -48,9 +62,17 @@ app.get('/api/aprendices/:dni', (req, res) => {
     });
 });
 
+
 //endpoint crear un aprendiz
-app.post("/api/aprendices", (req, res) => {
+app.post("/api/aprendices", cargar.single('imagen'), (req, res) => {
     const datoAprendiz = req.body
+
+
+    //modificar datoaprendidz con la ruta de la imagen si se subió una imagen
+    datoAprendiz.avatar = req.filename? 'misimagenes/' + req.filename : null;  
+    if (req.file) {
+        datoAprendiz.imagen = req.file.path;
+    }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
 
     //validar nombre y correo antes de continuar
     const { esValido, errores } = validarAprendiz(datoAprendiz);
