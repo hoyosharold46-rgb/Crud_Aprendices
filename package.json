@@ -1,0 +1,14 @@
+{
+  "name": "crud_aprendices",
+  "version": "1.0.0",
+  "description": "CRUD de aprendices con Express",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node --watch app.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.1.0"
+  }
+}
