@@ -5,6 +5,18 @@ const port = process.env.PUERTO || 3111;
 //body-parser
 app.use(express.json())
 
+// endpoint json
+app.post("/datosaJson", (req, res) =>{
+    const datosRecibidos = req.body
+    //validamos si loos datos son recibidos
+    if (datosRecibidos){
+        res.json({mensaje: "datos recibidos correctamente"})
+    }
+    res.status(500).json({Mensaje:"No se recibieron datos"});
+})
+
+
+
 //libreria para leer archivo
 const sistemaArchivo = require('fs');
 const ruta = require('path');
