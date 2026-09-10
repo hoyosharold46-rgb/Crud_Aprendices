@@ -1,19 +1,43 @@
 const express = require('express');
+const registroMiddleware = require("./middleware/registroMiddleware")
+const manejadorErrores = require("./middleware/manejadorErrores")
+const autenticarToken = require("./middleware/autenticar")
+const jswtoken = require("jsonwebtoken")
+const sistemaArchivo = require('fs');
+const ruta = require('path');
 const app = express();
 require('dotenv').config({ quiet: true });
 const port = process.env.PORT || 3000;
 //body-parser
 app.use(express.json())
+app.use(express.urlencoded({extend:true}))
 
-//libreria para leer archivo
-const sistemaArchivo = require('fs');
-const ruta = require('path');
-//generar una ruta para el archivo ListaDatos.json
-const rutaArchivoJson = ruta.join(__dirname, 'ListaDatos.json');
+//creacion y usu de middleware, ver el tiempo de ejecucion de una peticion
+app.use((req,res, next)=>{
+    const tiempoMilisegundos = Date.now()
+    console.log(`Tiempo: ${tiempoMilisegundos}`)
+    next()
+})
+app.use(registroMiddleware)
 
-//importar validaciones
-const { validarNombre, validarCorreo } = require('./validaciones/validar');
+//utilizar libreria multer
+const multer = require("multer")
+//configurar almacenamiento
+const almacenamiento = multer.diskStorage({
+    destination :(req, file, cb)=>{
+        cb(null, "misImagenes/")
+    },
+    filename:(req, file, cb)=> {
+        const extension = ruta.extname(file.originalname)
+        cb(null, `${Date.now()}${extension}`)
+    }
+})
 
+//crear sistema de carga
+const cargar = multer({ storage: almacenamiento });
+
+//generar una ruta para el archivo aprendices.json
+const rutaArchivoJson = ruta.join(__dirname, 'listaDatos.json');
 //ruta raiz
 app.get('/', (req, res) => {
     res.send('API RESTFUL - CRUD Aprendices');
@@ -21,126 +45,104 @@ app.get('/', (req, res) => {
 
 //endpoint para obtener todos los aprendices
 app.get('/api/aprendices', (req, res) => {
+    //const listaAprendices = []
     sistemaArchivo.readFile(rutaArchivoJson, "utf-8", (error, datos) => {
         if (error) {
-            return res.status(500).json({ Error: "Error al leer el archivo, conexión bd" })
+            res.status(500).json({ Error: "Error al leer el archivo, conxion bd" })
         }
         const listaAprendices = JSON.parse(datos);
         res.json(listaAprendices);
     });
 });
 
-//endpoint para listar todos los datos de un aprendiz por su dni
-app.get('/api/aprendices/:dni', (req, res) => {
-    const dni = parseInt(req.params.dni);
-    sistemaArchivo.readFile(rutaArchivoJson, "utf-8", (error, datos) => {
-        if (error) {
-            return res.status(500).json({ Error: "Error al leer el archivo, conexión bd" })
-        }
-        const listaAprendices = JSON.parse(datos);
-        const aprendiz = listaAprendices.find(a => a.dni === dni);
-        if (!aprendiz) {
-            return res.status(404).json({ Error: "No se encontró un aprendiz con ese dni" });
-        }
-        res.json(aprendiz);
-    });
-});
-
 //endpoint crear un aprendiz
-app.post("/api/aprendices", (req, res) => {
+app.post("/api/aprendices", cargar.single("imagen"),(req, res)=>{
     const datoAprendiz = req.body
-
-    //VALIDACIONES
-    const nombreValido = validarNombre(datoAprendiz.nombre);
-    if (!nombreValido.valido) {
-        return res.status(400).json({ Error: nombreValido.mensaje });
-    }
-
-    const correoValido = validarCorreo(datoAprendiz.correo);
-    if (!correoValido.valido) {
-        return res.status(400).json({ Error: correoValido.mensaje });
-    }
-
-    sistemaArchivo.readFile(rutaArchivoJson, "utf-8", (error, datos) => {
+    
+    sistemaArchivo.readFile(rutaArchivoJson, "utf-8", (error, datos)=>{
         if (error) {
-            return res.status(500).json({ Error: "Error al leer el archivo, conexión bd" })
+            res.status(500).json({ Error: "Error al leer el archivo, conxion bd" })
         }
         const listaAprendices = JSON.parse(datos);
-        //dni AUTOMÁTICO: se genera a partir del último dni registrado
-        const ultimoDni = listaAprendices.length > 0 ? listaAprendices[listaAprendices.length - 1].dni : 0;
-        datoAprendiz.dni = ultimoDni + 1;
-
+        //modificar datoAprendiz con la ruta de la foto
+    datoAprendiz.avatar = req.filename ? `/misImagenes/${req.file.filename}`:"sin imagen"    
         //adicionar a la lista el nuevo aprendiz
         listaAprendices.push(datoAprendiz)
         //adicionar al archivo el nuevo aprendiz
-        sistemaArchivo.writeFile(rutaArchivoJson, JSON.stringify(listaAprendices, null, 2), (error) => {
-            if (error) {
-                return res.status(500).json({ Error: "No se puede registrar el aprendiz." })
+        sistemaArchivo.writeFile(rutaArchivoJson, JSON.stringify(listaAprendices,null, 2),(error)=>{
+            if(error){
+                res.status(500).json({Error: "No se puede registrar el aprendiz."})
             }
-            res.status(201).json(datoAprendiz)
+            res.json(datoAprendiz)
         })
+        
     })
 })
 
 //Endpoint para editar un aprendiz
-app.put("/api/aprendices/:dni", (req, res) => {
+app.put("/api/aprendices/:dni", (req, res)=>{
     const dni = parseInt(req.params.dni)
     const datosAprendiz = req.body
-    sistemaArchivo.readFile(rutaArchivoJson, "utf-8", (error, datos) => {
+    sistemaArchivo.readFile(rutaArchivoJson, "utf-8", (error, datos)=>{
         if (error) {
-            return res.status(500).json({ Error: "Error al leer el archivo, conexión bd" })
+            res.status(500).json({ Error: "Error al leer el archivo, conxion bd" })
         }
         let listaAprendices = JSON.parse(datos);
-
-        //verificar que el aprendiz exista
-        const existe = listaAprendices.some(a => a.dni === dni);
-        if (!existe) {
-            return res.status(404).json({ Error: "No se encontró un aprendiz con ese dni" });
-        }
-
         //modificar datos de un aprendiz
+
         listaAprendices = listaAprendices.map(aprendiz => {
-            return aprendiz.dni === dni ? { ...aprendiz, ...datosAprendiz } : aprendiz
-        })
-        //adicionar al archivo el aprendiz modificado
-        sistemaArchivo.writeFile(rutaArchivoJson, JSON.stringify(listaAprendices, null, 2), (error) => {
-            if (error) {
-                return res.status(500).json({ Error: "No se puede registrar el aprendiz." })
+                return aprendiz.dni === dni ? {...aprendiz, ...datosAprendiz } : aprendiz
+            })
+        //adicionar al archivo el nuevo aprendiz
+        sistemaArchivo.writeFile(rutaArchivoJson, JSON.stringify(listaAprendices,null, 2),(error)=>{
+            if(error){
+                res.status(500).json({Error: "No se puede registrar el aprendiz."})
             }
             res.json(datosAprendiz)
         })
+        
     })
 })
 
-//Endpoint para eliminar un aprendiz
-app.delete("/api/aprendices/:dni", (req, res) => {
-    const dni = parseInt(req.params.dni);
-    sistemaArchivo.readFile(rutaArchivoJson, "utf-8", (error, datos) => {
-        if (error) {
-            return res.status(500).json({ Error: "Error al leer el archivo, conexión bd" })
-        }
-        let listaAprendices = JSON.parse(datos);
-
-        //verificar que el aprendiz exista
-        const aprendizExiste = listaAprendices.some(a => a.dni === dni);
-        if (!aprendizExiste) {
-            return res.status(404).json({ Error: "No se encontró un aprendiz con ese dni" });
-        }
-
-        //eliminar al aprendiz de la lista
-        listaAprendices = listaAprendices.filter(a => a.dni !== dni);
-
-        //guardar los cambios en el archivo
-        sistemaArchivo.writeFile(rutaArchivoJson, JSON.stringify(listaAprendices, null, 2), (error) => {
-            if (error) {
-                return res.status(500).json({ Error: "No se puede eliminar el aprendiz." })
-            }
-            res.json({ Mensaje: "Aprendiz eliminado correctamente" })
-        })
-    })
-})
+//mi middleware 
+app.use(registroMiddleware)
 
 // Modo de escucha del servidor
 app.listen(port, () => {
-    console.log(`SERVER: http://localhost:${port}`);
-});
+    console.log(`SERVER: http://localhost:${port}`)
+})
+
+//endpoint con ruta protegida
+app.get("/rutaProtegida", autenticarToken,(req, res) => {
+    res.json({mensaje: "Este es una ruta protegida"})
+})
+
+// endpoint inicio sesion para generar token
+app.post("/login", (req, res) => {
+    const {usuario, clave} = req.body
+    //simular bd
+    const usuariobd = {
+        "usuario" : "oscar",
+        "clave" : "abc123"
+    }
+    //validar datos del usuario
+    if (usuario !== usuariobd.usuario || clave !==  usuariobd.clave){
+        res.json({mensaje: "Usuario y/o clave incorrectos."})
+    }
+//crear token
+const token = jswtoken.sign(
+    //pasamos datos del usuario
+    {user: usuario},
+    process.env.JWT_SECRET,
+    { expiresIn: "1h" }
+)
+res.json({token})
+})
+
+//manejador de errores
+app.use(manejadorErrores)
+
+// endpoint para provocar un error
+app.get("/error", (req, res, next) => {
+    next(new Error("Error provocado"))
+})
