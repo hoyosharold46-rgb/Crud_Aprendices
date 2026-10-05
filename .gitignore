@@ -1,5 +1,9 @@
 node_modules/
 .env
 .vscode/
+<<<<<<< HEAD
 npm-debug.log*
 /src/generated/prisma
+=======
+npm-debug.log*
+>>>>>>> c3e725876a083a659292ed6e4c47402e17a44c44

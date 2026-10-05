@@ -12,5 +12,29 @@
     "edad": 20,
     "correo": "fer@example.com",
     "dni": 3
+<<<<<<< HEAD
+=======
+  },
+  {
+    "nombre": "juanes",
+    "apellido": "pedroza",
+    "edad": 39,
+    "correo": "juanes@example.com",
+    "dni": 4
+  },
+  {
+    "nombre": "jksakks",
+    "apellido": "pedroza",
+    "edad": 39,
+    "correo": "juanes@example.com",
+    "dni": 5
+  },
+  {
+    "nombre": "ñlsl",
+    "apellido": "arizona",
+    "edad": 10,
+    "correo": "fer@example.com",
+    "dni": 6
+>>>>>>> c3e725876a083a659292ed6e4c47402e17a44c44
   }
 ]

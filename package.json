@@ -4,6 +4,7 @@
   "description": "CRUD de aprendices con Express",
   "main": "app.js",
   "scripts": {
+<<<<<<< HEAD
     "dev": "node --watch src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -19,5 +20,14 @@
     "@prisma/client": "^7.10.0",
     "prisma": "^7.10.0",
     "tsx": "^4.23.15"
+=======
+    "start": "node app.js",
+    "dev": "node --watch app.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.1.0",
+    "multer": "^2.2.0"
+>>>>>>> c3e725876a083a659292ed6e4c47402e17a44c44
   }
 }
